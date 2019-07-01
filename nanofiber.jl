@@ -1,6 +1,6 @@
 using SpecialFunctions, MAT
 
-# Set of parameters to generate
+# Set of parameters to generate fields
 struct Param
     resx::Int64
     resy::Int64
@@ -18,6 +18,16 @@ struct Param
     a::Float64    
     s::Float64
     A::Float64
+end
+
+# struct to hold all fields
+struct Fields
+    Er::Array{1,Float64}
+    Ephi::Array{1,Float64}
+    Ez::Array{1,Float64}
+    Az::Array{1,Float64}
+    Br::Array{1,Float64}
+    Bphi::Array{1,Float64}
 end
 
 # This function relies on "packeddata.mat" and will create realiztic parameters
@@ -91,8 +101,7 @@ function calc_N2(x, y, z, params)
 end
 
 function generate_field()
-
-    return field
+    return Fields(Er, Ephi, Ez, zeros(res), zeros(res), zeros(res))
 end
 
 function output_field(field)
