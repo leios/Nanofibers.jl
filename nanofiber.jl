@@ -25,19 +25,19 @@ mutable struct Param
 end
 
 # struct to hold all fields
-struct Fields
-    E1::Array{1,Float64}
-    E2::Array{1,Float64}
-    E3::Array{1,Float64}
+mutable struct Fields
+    E1::Array{Float64,1}
+    E2::Array{Float64,1}
+    E3::Array{Float64,1}
 end
 
 # This function relies on "packeddata.mat" and will create realiztic parameters
 # based on the provided file for experimentally realistic results
-function read_mat(filename, value, xDim, yDim, zDim, xmax, ymax, zmax, mode_a)
+function read_mat(filename, value, xDim, resy, resz, xmax, ymax, zmax, mode_a)
 
     data = matread(filename)
 
-    return Param(xDim, yDim, zDim, mode_a, 1, xmax, ymax, zmax,
+    return Param(xDim, resy, resz, mode_a, 1, xmax, ymax, zmax,
                  data["lambda"][value], data["n1"][value], 1.0,
                  data["beta1"][value], data["h"][value], data["q"][value],
                  data["a"],0.0,0.0,0.0,0.0)
@@ -70,7 +70,6 @@ function calc_A!(params)
     l = params.mode_a
     a = params.a
 
-    println(N1, '\t', N2)
     A = (beta/(2*q))*((besselj(l,h*a)/besselk(l,q*a))/
          sqrt(2*pi*a*a*(n1*n1*N1 + n2*n2*N2)))
 
@@ -101,8 +100,8 @@ function calc_N2!(params)
 
     N2 = (besselj(l,h*a)^2/(2*besselk(l,q*a))^2)*
           ((beta*beta / (4*q*q))*
-           (((1 - s)^2)*(besselk(l-1,q*a)^2 - besselk(l, q*a)^2)+
-              ((1+s)^2)*(besselk(l+1,q*a)^2-besselk(l, q*a)*besselk(l+2,q*a)))+
+           (((1 - s)^2)*(besselk(l-1,q*a)^2 - besselk(l, q*a)^2)-
+              ((1+s)^2)*(besselk(l+1,q*a)^2-besselk(l, q*a)*besselk(l+2,q*a)))-
            0.5*(besselk(l, q*a)^2+besselk(l-1,q*a)*besselk(l+1,q*a)))
     params.N2 = N2
 end
@@ -118,11 +117,15 @@ function calc_E_circ(params, x, y, z)
 
     r = sqrt(x*x + y*y)
 
-    Er = im*A*((1-s)*besselk(l-1,q*r)+(1+s)*besselk(l+1,q*r))
-    Ephi = -A*((1-s)*besselk(l-1,q*r)-(1+s)*besselk(l+1,q*r))
-    Ez = 2*A*(q/beta)*besselk(l,q*r)
+    if r < params.a
+        return [0.0, 0.0, 0.0]
+    else
+        Er = im*A*((1-s)*besselk(l-1,q*r)+(1+s)*besselk(l+1,q*r))
+        Ephi = -A*((1-s)*besselk(l-1,q*r)-(1+s)*besselk(l+1,q*r))
+        Ez = 2*A*(q/beta)*besselk(l,q*r)
 
-    return [Er, Ephi, Ez]
+        return [Er, Ephi, Ez]
+    end
 
 end
 
@@ -138,14 +141,17 @@ function calc_E_lin(params, x, y, z)
     lambda = params.lambda
 
     r = sqrt(x*x + y*y)
+    if r < a
+        return [0.0, 0.0, 0.0]
+    else
+        Ex = sqrt(2)*A*((1-s)besselk(l-1,q*r)cos(angle)
+                        +(1+s)besselk(l+1,q*r)cos(2*phi-angle))
+        Ey = sqrt(2)*A*((1-s)besselk(l-1,q*r)sin(angle)
+                        +(1+s)besselk(l+1,q*r)sin(2*phi-angle))
+        Ez = 2*sqrt(2)*im*A*(q/beta)besselk(l,q*r)cos(phi-angle)
 
-    Ex = sqrt(2)*A*((1-s)besselk(l-1,q*r)cos(angle)
-                    +(1+s)besselk(l+1,q*r)cos(2*phi-angle))
-    Ey = sqrt(2)*A*((1-s)besselk(l-1,q*r)sin(angle)
-                    +(1+s)besselk(l+1,q*r)sin(2*phi-angle))
-    Ez = 2*sqrt(2)*im*A*(q/beta)besselk(l,q*r)cos(phi-angle)
-
-    return [Ex, Ey, Ez]
+        return [Ex, Ey, Ez]
+    end
 
 end
 
@@ -155,9 +161,9 @@ function generate_fields(params, polarization)
     calc_N2!(params)
     calc_A!(params)
 
-    E1 = zeros(params.xDim*params.yDim*params.zDim)
-    E2 = zeros(params.xDim*params.yDim*params.zDim)
-    E3 = zeros(params.xDim*params.yDim*params.zDim)
+    E1 = zeros(params.resx*params.resy*params.resz)
+    E2 = zeros(params.resx*params.resy*params.resz)
+    E3 = zeros(params.resx*params.resy*params.resz)
 
     for i = 1:params.resx
         x = -params.xmax/2 + i*params.xmax/params.resx
@@ -165,6 +171,7 @@ function generate_fields(params, polarization)
             y = -params.ymax/2 + i*params.ymax/params.resy
             for k = 1:params.resz
                 z = -params.zmax/2 + i*params.zmax/params.resz
+                println(x, '\t', y, '\t', z)
                 efields = zeros(3)
                 if(polarization == "circ")
                     efields = calc_E_circ(params, x, y, z)
@@ -174,7 +181,8 @@ function generate_fields(params, polarization)
                     println("polarization mode ", polarization, "not found")
                     exit()
                 end
-                index = k + j*zDim + i*yDim*zDim
+                index = k + (j-1)*params.resz + (i-1)*params.resy*params.resz
+                println(efields)
                 E1[index] = efields[1]
                 E2[index] = efields[2]
                 E3[index] = efields[3]
