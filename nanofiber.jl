@@ -33,11 +33,11 @@ end
 
 # This function relies on "packeddata.mat" and will create realiztic parameters
 # based on the provided file for experimentally realistic results
-function read_mat(filename, value, xDim, resy, resz, xmax, ymax, zmax, mode_a)
+function read_mat(filename, value, resx, resy, resz, xmax, ymax, zmax, mode_a)
 
     data = matread(filename)
 
-    return Param(xDim, resy, resz, mode_a, 1, xmax, ymax, zmax,
+    return Param(resx, resy, resz, mode_a, 1, xmax, ymax, zmax,
                  data["lambda"][value], data["n1"][value], 1.0,
                  data["beta1"][value], data["h"][value], data["q"][value],
                  data["a"],0.0,0.0,0.0,0.0)
@@ -129,19 +129,19 @@ function calc_E_circ(params, x, y, z)
 
 end
 
-function calc_E_lin(params, x, y, z)
+function calc_E_lin(params, angle, x, y, z)
     q = params.q
     A = params.A
     l = params.mode_a
     s = params.s
 
-    phi = atan2(y,x)
+    phi = atan(y,x)
 
     beta = params.beta
     lambda = params.lambda
 
     r = sqrt(x*x + y*y)
-    if r < a
+    if r < params.a
         return [0.0, 0.0, 0.0]
     else
         Ex = sqrt(2)*A*((1-s)besselk(l-1,q*r)cos(angle)
@@ -168,24 +168,22 @@ function generate_fields(params, polarization)
     for i = 1:params.resx
         x = -params.xmax/2 + i*params.xmax/params.resx
         for j = 1:params.resy
-            y = -params.ymax/2 + i*params.ymax/params.resy
+            y = -params.ymax/2 + j*params.ymax/params.resy
             for k = 1:params.resz
-                z = -params.zmax/2 + i*params.zmax/params.resz
-                println(x, '\t', y, '\t', z)
+                z = -params.zmax/2 + k*params.zmax/params.resz
                 efields = zeros(3)
                 if(polarization == "circ")
                     efields = calc_E_circ(params, x, y, z)
                 elseif(polarization == "lin")
-                    efields = calc_E_lin(params, x, y, z)
+                    efields = calc_E_lin(params, pi/4, x, y, z)
                 else
                     println("polarization mode ", polarization, "not found")
                     exit()
                 end
                 index = k + (j-1)*params.resz + (i-1)*params.resy*params.resz
-                println(efields)
-                E1[index] = efields[1]
-                E2[index] = efields[2]
-                E3[index] = efields[3]
+                E1[index] = abs(efields[1]);
+                E2[index] = abs(efields[2]);
+                E3[index] = abs(efields[3]);
             end
         end
     end
