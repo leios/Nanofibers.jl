@@ -29,6 +29,7 @@ mutable struct Fields
     E1::Array{Float64,1}
     E2::Array{Float64,1}
     E3::Array{Float64,1}
+    Etot::Array{Float64,1}
 end
 
 # This function relies on "packeddata.mat" and will create realiztic parameters
@@ -150,6 +151,7 @@ function calc_E_lin(params, angle, x, y, z)
                         +(1+s)besselk(l+1,q*r)sin(2*phi-angle))
         Ez = 2*sqrt(2)*im*A*(q/beta)besselk(l,q*r)cos(phi-angle)
 
+        #return [sqrt(Ex*Ex + Ey*Ey), atan(Ey,Ex), Ez]
         return [Ex, Ey, Ez]
     end
 
@@ -175,7 +177,7 @@ function generate_fields(params, polarization)
                 if(polarization == "circ")
                     efields = calc_E_circ(params, x, y, z)
                 elseif(polarization == "lin")
-                    efields = calc_E_lin(params, pi/4, x, y, z)
+                    efields = calc_E_lin(params, 0, x, y, z)
                 else
                     println("polarization mode ", polarization, "not found")
                     exit()
@@ -187,11 +189,34 @@ function generate_fields(params, polarization)
             end
         end
     end
-    return Fields(E1, E2, E3)
+    return Fields(E1, E2, E3, sqrt.(E1.*E1+E2.*E2+E3.*E3))
 end
 
-function output_field(field)
+function output_2d_field(filename, params, field)
+
+    output_file = open(filename, "w")
+
+    if params.resz > 1
+        println("zDim != 1")
+        @assert params.resz <= 1
+    end
+
+    for i = 1:params.resx
+        for j = 1:params.resy
+            index = j + (i-1)*params.resy
+            write(output_file, string(field[index])*'\t')
+        end
+        write(output_file, '\n')
+    end
+
+    close(output_file)
+
+end
+
+function generate_fields()
     params = read_mat("packeddata200.mat", 14, 256, 256, 1, 1., 1., 1., 1)
 
     fields = generate_fields(params, "circ")
+
+    return fields
 end
