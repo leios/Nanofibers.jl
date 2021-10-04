@@ -45,7 +45,7 @@ function read_mat(filename, value, resx, resy, resz, xmax, ymax, zmax, mode_a)
 end
 
 function derive(f, l, arg, dx)
-    return (f(l, arg) - f(l, arg+dx))/dx
+    return (f(l, arg+dx) - f(l, arg))/dx
 end
 
 function calc_s!(params)
@@ -54,7 +54,7 @@ function calc_s!(params)
     a = params.a
     l = params.mode_a
     dx = a/100
-    s = (1/(h*h*a*a))+(1/(q*q*a*a))/
+    s = ((1/(h*h*a*a))+(1/(q*q*a*a)))/
          ((derive(besselj, l, h*a, dx)/(h*a*besselj(l,h*a)))+
           (derive(besselk, l, q*a, dx)/(q*a*besselk(l,q*a))))
     params.s = s
@@ -99,7 +99,7 @@ function calc_N2!(params)
     l = params.mode_a
     a = params.a
 
-    N2 = (besselj(l,h*a)^2/(2*besselk(l,q*a))^2)*
+    N2 = (besselj(l,h*a)^2/(2*besselk(l,q*a)^2))*
           ((beta*beta / (4*q*q))*
            (((1 - s)^2)*(besselk(l-1,q*a)^2 - besselk(l, q*a)^2)-
               ((1+s)^2)*(besselk(l+1,q*a)^2-besselk(l, q*a)*besselk(l+2,q*a)))-
