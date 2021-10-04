@@ -45,7 +45,7 @@ function read_mat(filename, value, resx, resy, resz, xmax, ymax, zmax, mode_a)
 end
 
 function derive(f, l, arg, dx)
-    return (f(l, arg) - f(l, arg+dx))/dx
+    return (f(l, arg+dx) - f(l, arg))/dx
 end
 
 function calc_s!(params)
