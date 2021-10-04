@@ -54,7 +54,7 @@ function calc_s!(params)
     a = params.a
     l = params.mode_a
     dx = a/100
-    s = (1/(h*h*a*a))+(1/(q*q*a*a))/
+    s = ((1/(h*h*a*a))+(1/(q*q*a*a)))/
          ((derive(besselj, l, h*a, dx)/(h*a*besselj(l,h*a)))+
           (derive(besselk, l, q*a, dx)/(q*a*besselk(l,q*a))))
     params.s = s
