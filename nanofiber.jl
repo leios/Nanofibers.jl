@@ -99,7 +99,7 @@ function calc_N2!(params)
     l = params.mode_a
     a = params.a
 
-    N2 = (besselj(l,h*a)^2/(2*besselk(l,q*a))^2)*
+    N2 = (besselj(l,h*a)^2/(2*besselk(l,q*a)^2))*
           ((beta*beta / (4*q*q))*
            (((1 - s)^2)*(besselk(l-1,q*a)^2 - besselk(l, q*a)^2)-
               ((1+s)^2)*(besselk(l+1,q*a)^2-besselk(l, q*a)*besselk(l+2,q*a)))-
